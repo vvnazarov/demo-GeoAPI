@@ -33,6 +33,7 @@ class Geo extends Model
     public static function boot()
     {
         parent::boot();
+
         static::saving(function (self $model) {
             if (!$model->getGeometryChanges()['changed']) {
                 return;
@@ -57,7 +58,7 @@ class Geo extends Model
                 try {
                     GeoHistory::create([
                         'geo_id'   => $model->id,
-                        'geometry' => $geometryChanges['previous'],
+                        'geometry' => $geometryChanges['previous_object'],
                     ]);
                 } catch (\Throwable $e) {
                     Log::error($e);
@@ -107,6 +108,7 @@ class Geo extends Model
         $geometryChanges = [
             'changed'  => $previousGeometry !== $newGeometry,
             'previous' => $previousGeometry,
+            'previous_object' => $previousGeometryObject,
             'new'      => $newGeometry,
         ];
         return $geometryChanges;
