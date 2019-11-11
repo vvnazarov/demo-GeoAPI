@@ -6,6 +6,7 @@ use Exception;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Database\QueryException;
 use Log;
 
 class Handler extends ExceptionHandler
@@ -68,11 +69,13 @@ class Handler extends ExceptionHandler
                     'error' => $exception->getMessage(),
                 ], env('APP_STATUS_ERROR_CODE'));
                 break;
+            case QueryException::class:
+                $error = 'DB error';
             default:
                 Log::error($exception);
                 return response()->json([
                     'status' => env('APP_STATUS_ERROR_TEXT'),
-                    'error' => 'unknown error',
+                    'error' => $error ?? 'unknown error',
                     'time' => time(),
                 ], env('APP_STATUS_ERROR_CODE'));
         }
