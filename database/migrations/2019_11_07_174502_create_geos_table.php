@@ -18,7 +18,7 @@ class CreateGeosTable extends Migration
             $table->string('name');
             $table->text('description');
             $table->string('type');
-            $table->decimal('area', 21, 6)->nullable();
+            $table->decimal('area', 21, 6);
             $table->polygon('geometry');
             $table->timestamps();
             $table->softDeletes();
