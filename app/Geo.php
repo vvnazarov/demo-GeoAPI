@@ -35,35 +35,15 @@ class Geo extends Model
         parent::boot();
 
         static::saving(function (self $model) {
-            if (!$model->getGeometryChanges()['changed']) {
-                return;
-            }
-
-            try {
-                /** @todo разобраться, почему не работает через binding */
-                $query = DB::selectOne(
-                    'SELECT ST_Area(ST_GeomFromText("' .
-                    $model->getGeometryAsWKT() .
-                    '")) AS area'
-                );
-                $model->area = $query->area;
-            } catch (\Throwable $e) {
-                throw new GeoException('cam\'t calculate geo\'s area');
+            if ($model->getGeometryModification()['is_modified']) {
+                $model->calculateArea();
             }
         });
 
         static::saved(function (self $model) {
-            $geometryChanges = $model->getGeometryChanges();
-            if (isset($geometryChanges['previous']) && $geometryChanges['changed']) {
-                try {
-                    GeoHistory::create([
-                        'geo_id'   => $model->id,
-                        'geometry' => $geometryChanges['previous_object'],
-                    ]);
-                } catch (\Throwable $e) {
-                    Log::error($e);
-                    throw new GeoException('cam\'t save geo\'s history');
-                }
+            $geometryModification = $model->getGeometryModification();
+            if (isset($geometryModification['previous']) && $geometryModification['is_modified']) {
+                $model->saveHistory($geometryModification['previous_object']);
             }
         });
     }
@@ -91,28 +71,65 @@ class Geo extends Model
     }
 
     /**
-     * @return array
+     * @return mixed[]
      */
-    public function getGeometryChanges(): array
+    protected function getGeometryModification(): array
     {
-        static $geometryChanges = null;
-
-        if (isset($geometryChanges)) {
-            return $geometryChanges;
+        static $geometryModification = null;
+        if (isset($geometryModification)) {
+            return $geometryModification;
         }
 
         /** @var Polygon $previousGeometryObject */
         $previousGeometryObject = $this->getOriginal()['geometry'] ?? null;
         $previousGeometry = $previousGeometryObject ? $previousGeometryObject->toWKT() : null;
         $newGeometry = $this->getGeometryAsWKT();
-        $geometryChanges = [
-            'changed'  => $previousGeometry !== $newGeometry,
+        $geometryModification = [
+            'is_modified' => $previousGeometry !== $newGeometry,
             'previous' => $previousGeometry,
             'previous_object' => $previousGeometryObject,
-            'new'      => $newGeometry,
+            'new' => $newGeometry,
         ];
-        return $geometryChanges;
 
+        return $geometryModification;
+    }
+
+    /**
+     * @throws GeoException
+     */
+    protected function calculateArea(): void
+    {
+        try {
+            /** @todo
+             * разобраться, почему не работает через binding
+             * однако, теущий вариант также безопасен
+             */
+            $query = DB::selectOne(
+                'SELECT ST_Area(ST_GeomFromText("' .
+                $this->getGeometryAsWKT() .
+                '")) AS area'
+            );
+            $this->area = $query->area;
+        } catch (\Throwable $e) {
+            throw new GeoException('cam\'t calculate geo\'s area');
+        }
+    }
+
+    /**
+     * @param Polygon $history
+     * @throws GeoException
+     */
+    protected function saveHistory(Polygon $history): void
+    {
+        try {
+            GeoHistory::create([
+                'geo_id' => $this->id,
+                'geometry' => $history,
+            ]);
+        } catch (\Throwable $e) {
+            Log::error($e);
+            throw new GeoException('cam\'t save geo\'s history');
+        }
     }
 
     /**
