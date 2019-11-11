@@ -50,31 +50,32 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Exception $exception)
     {
+        $status = env('APP_STATUS_ERROR_TEXT');
         switch(get_class($exception)) {
             case ValidationException::class:
                 return response()->json([
-                    'status' => env('APP_STATUS_ERROR_TEXT'),
+                    'status' => $status,
                     'error' => $exception->getMessage(),
                 ], 400);
                 break;
             case ModelNotFoundException::class:
                 return response()->json([
-                    'status' => env('APP_STATUS_ERROR_TEXT'),
+                    'status' => $status,
                     'error' => 'not found',
                 ], 404);
                 break;
             case GeoException::class:
                 return response()->json([
-                    'status' => env('APP_STATUS_ERROR_TEXT'),
+                    'status' => $status,
                     'error' => $exception->getMessage(),
-                ], env('APP_STATUS_ERROR_CODE'));
+                ], 422);
                 break;
             case QueryException::class:
                 $error = 'DB error';
             default:
                 Log::error($exception);
                 return response()->json([
-                    'status' => env('APP_STATUS_ERROR_TEXT'),
+                    'status' => $status,
                     'error' => $error ?? 'unknown error',
                     'time' => time(),
                 ], env('APP_STATUS_ERROR_CODE'));

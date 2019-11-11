@@ -37,7 +37,7 @@ class GeoController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->validate(Geo::validationRules(true));
+        $data = $request->validate(Geo::getValidationRules(true));
         $data['geometry'] = Geo::getPolygonFromWKT($request->geometry);
 
         /** @var Geo $geo */
@@ -57,7 +57,7 @@ class GeoController extends Controller
      */
     public function update(Request $request, int $id)
     {
-        $data = $request->validate(Geo::validationRules());
+        $data = $request->validate(Geo::getValidationRules());
         if (isset($request->geometry)) {
             $data['geometry'] = Geo::getPolygonFromWKT($request->geometry);
         }
@@ -72,6 +72,8 @@ class GeoController extends Controller
             $success = DB::transaction(function () use ($geo) {
                 return $geo->save();
             });
+        } catch (GeoException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             Log::error($e->getMessage());
             if ($e instanceof QueryException) {
