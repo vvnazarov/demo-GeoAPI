@@ -60,6 +60,7 @@ class Geo extends Model
                         'geometry' => $geometryChanges['previous'],
                     ]);
                 } catch (\Throwable $e) {
+                    Log::error($e);
                     throw new GeoException('cam\'t save geo\'s history');
                 }
             }

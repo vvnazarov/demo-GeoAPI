@@ -72,6 +72,8 @@ class GeoController extends Controller
             $success = DB::transaction(function () use ($geo) {
                 return $geo->save();
             });
+        } catch (GeoException $e) {
+            throw $e;
         } catch (\Throwable $e) {
             Log::error($e->getMessage());
             if ($e instanceof QueryException) {
