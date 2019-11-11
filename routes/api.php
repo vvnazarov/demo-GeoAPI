@@ -13,6 +13,14 @@ use Illuminate\Http\Request;
 |
 */
 
+/**
+ * @todo
+ * авторизация Laravel Passport
+ * https://laravel.com/docs/5.8/passport
+ */
 Route::middleware('auth:api')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+Route::apiResource('/v1', 'GeoController');
+

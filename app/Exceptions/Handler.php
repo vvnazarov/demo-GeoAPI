@@ -4,6 +4,9 @@ namespace App\Exceptions;
 
 use Exception;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Validation\ValidationException;
+use Log;
 
 class Handler extends ExceptionHandler
 {
@@ -42,10 +45,36 @@ class Handler extends ExceptionHandler
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  \Exception  $exception
-     * @return \Illuminate\Http\Response
+     * @return \Illuminate\Http\JsonResponse
      */
     public function render($request, Exception $exception)
     {
-        return parent::render($request, $exception);
+        switch(get_class($exception)) {
+            case ValidationException::class:
+                return response()->json([
+                    'status' => env('APP_STATUS_ERROR_TEXT'),
+                    'error' => $exception->getMessage(),
+                ], 400);
+                break;
+            case ModelNotFoundException::class:
+                return response()->json([
+                    'status' => env('APP_STATUS_ERROR_TEXT'),
+                    'error' => 'not found',
+                ], 404);
+                break;
+            case GeoException::class:
+                return response()->json([
+                    'status' => env('APP_STATUS_ERROR_TEXT'),
+                    'error' => $exception->getMessage(),
+                ], env('APP_STATUS_ERROR_CODE'));
+                break;
+            default:
+                Log::error($exception);
+                return response()->json([
+                    'status' => env('APP_STATUS_ERROR_TEXT'),
+                    'error' => 'unknown error',
+                    'time' => time(),
+                ], env('APP_STATUS_ERROR_CODE'));
+        }
     }
 }
