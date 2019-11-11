@@ -27,11 +27,11 @@
 
 #### Установка
 
-1.  _composer install_
+1. _composer install_
 
-2.  Скопировать _.env.example_ -> _.env_
+2. Скопировать _.env.example_ -> _.env_
 <br>Прописать данные сервера БД
-<br>_artisan key:generate_
+<br>_php artisan key:generate_
 
 3. Заполнить БД
 <br>_php artisan migrate --seed_

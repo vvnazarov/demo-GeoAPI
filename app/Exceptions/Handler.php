@@ -50,6 +50,7 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Exception $exception)
     {
+        /** @todo 422 + vars */
         switch(get_class($exception)) {
             case ValidationException::class:
                 return response()->json([

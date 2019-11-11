@@ -8,6 +8,7 @@ use Grimzy\LaravelMysqlSpatial\Eloquent\SpatialTrait;
 use Grimzy\LaravelMysqlSpatial\Types\Polygon;
 use Illuminate\Support\Facades\DB;
 use App\Exceptions\GeoException;
+use Log;
 
 class Geo extends Model
 {
@@ -32,31 +33,35 @@ class Geo extends Model
     public static function boot()
     {
         parent::boot();
-
         static::saving(function (self $model) {
-            /** @todo оптимизировать */
+            if (!$model->getGeometryChanges()['changed']) {
+                return;
+            }
+
             try {
+                /** @todo разобраться, почему не работает через binding */
                 $query = DB::selectOne(
                     'SELECT ST_Area(ST_GeomFromText("' .
                     $model->getGeometryAsWKT() .
                     '")) AS area'
                 );
                 $model->area = $query->area;
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 throw new GeoException('cam\'t calculate geo\'s area');
             }
         });
 
         static::saved(function (self $model) {
-            $previousGeometry = $model->getOriginal()['geometry'] ?? null;
-            if (
-                isset($previousGeometry) &&
-                ($previousGeometry->toWKT() !== $model->getGeometryAsWKT())
-            ) {
-                GeoHistory::create([
-                    'geo_id'   => $model->id,
-                    'geometry' => $previousGeometry,
-                ]);
+            $geometryChanges = $model->getGeometryChanges();
+            if (isset($geometryChanges['previous']) && $geometryChanges['changed']) {
+                try {
+                    GeoHistory::create([
+                        'geo_id'   => $model->id,
+                        'geometry' => $geometryChanges['previous'],
+                    ]);
+                } catch (\Throwable $e) {
+                    throw new GeoException('cam\'t save geo\'s history');
+                }
             }
         });
     }
@@ -84,10 +89,34 @@ class Geo extends Model
     }
 
     /**
+     * @return array
+     */
+    public function getGeometryChanges(): array
+    {
+        static $geometryChanges = null;
+
+        if (isset($geometryChanges)) {
+            return $geometryChanges;
+        }
+
+        /** @var Polygon $previousGeometryObject */
+        $previousGeometryObject = $this->getOriginal()['geometry'] ?? null;
+        $previousGeometry = $previousGeometryObject ? $previousGeometryObject->toWKT() : null;
+        $newGeometry = $this->getGeometryAsWKT();
+        $geometryChanges = [
+            'changed'  => $previousGeometry !== $newGeometry,
+            'previous' => $previousGeometry,
+            'new'      => $newGeometry,
+        ];
+        return $geometryChanges;
+
+    }
+
+    /**
      * @param bool $creation
      * @return array
      */
-    public static function validationRules(bool $creation = false): array
+    public static function getValidationRules(bool $creation = false): array
     {
         $validationRules = [
             'name' => 'max:64',
