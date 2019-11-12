@@ -13,6 +13,29 @@ use Log;
 class GeoService
 {
     /**
+     * @param Request $request
+     * @param bool $creation
+     * @return array
+     * @throws \Exception
+     */
+    public function validate(Request $request, bool $creation = false): array
+    {
+        $validationRules = Geo::VALIDATION_RULES;
+        if ($creation) {
+            $validationRules = array_map(function ($value) {
+                return 'required|' . $value;
+            }, $validationRules);
+        }
+
+        $validatedData = $request->validate($validationRules);
+        if (isset($request->geometry)) {
+            $validatedData['geometry'] = Geo::getPolygonFromWKT($request->geometry);
+        }
+
+        return $validatedData;
+    }
+
+    /**
      * Get all geos
      * @return Collection
      */
@@ -62,26 +85,43 @@ class GeoService
     }
 
     /**
-     * @param Request $request
-     * @param bool $creation
+     * @param int $id
+     * @param bool $archive
      * @return array
-     * @throws \Exception
+     * @throws GeoException
      */
-    public function validate(Request $request, bool $creation = false): array
-    {
-        $validationRules = Geo::VALIDATION_RULES;
-        if ($creation) {
-            $validationRules = array_map(function ($value) {
-                return 'required|' . $value;
-            }, $validationRules);
-        }
+    public function destroy(int $id, bool $archive) {
+        /** @var Geo $geo */
+        $geo = Geo::findOrFail($id);
 
-        $validatedData = $request->validate($validationRules);
-        if (isset($request->geometry)) {
-            $validatedData['geometry'] = Geo::getPolygonFromWKT($request->geometry);
+        if ($archive) {
+            $messageOK = 'archived';
+            $method = 'delete';
+            $verb = 'archive';
+        } else {
+            $messageOK = 'deleted';
+            $method = 'forceDelete';
+            $verb = 'delete';
         }
+        $messageError = 'not ' . $messageOK;
 
-        return $validatedData;
+        try {
+            if ($geo->$method()) {
+                return [
+                    'status' => env('APP_STATUS_OK_TEXT'),
+                    'result' => $messageOK,
+                ];
+            } else {
+                throw new GeoException($messageError . ' (can\'t ' . $verb . ')');
+            }
+        } catch (GeoException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::error($e->getMessage());
+            if ($e instanceof QueryException) {
+                $messageError .= ' (DB)';
+            }
+            throw new GeoException($messageError);
+        }
     }
-
 }

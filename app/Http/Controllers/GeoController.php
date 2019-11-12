@@ -7,6 +7,7 @@ use App\Services\GeoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
 use App\Exceptions\GeoException;
 use Log;
 
@@ -62,8 +63,8 @@ class GeoController extends Controller
     /**
      * @param Request $request
      * @param int $id
-     * @return \Illuminate\Http\JsonResponse
-     * @throws \Exception
+     * @return JsonResponse
+     * @throws GeoException
      */
     public function update(Request $request, int $id)
     {
@@ -75,42 +76,13 @@ class GeoController extends Controller
     /**
      * @param Request $request
      * @param int $id
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      * @throws GeoException
      */
     public function destroy(Request $request, int $id)
     {
-        /** @var Geo $geo */
-        $geo = Geo::findOrFail($id);
-
-        if ($request->archive === 'true') {
-            $messageOK = 'archived';
-            $method = 'delete';
-            $verb = 'archive';
-        } else {
-            $messageOK = 'deleted';
-            $method = 'forceDelete';
-            $verb = 'delete';
-        }
-        $messageError = 'not ' . $messageOK;
-
-        try {
-            if ($geo->$method()) {
-                return response()->json([
-                    'status' => env('APP_STATUS_OK_TEXT'),
-                    'result' => $messageOK,
-                ]);
-            } else {
-                throw new GeoException($messageError . ' (can\'t ' . $verb . ')');
-            }
-        } catch (GeoException $e) {
-            throw $e;
-        } catch (\Throwable $e) {
-            Log::error($e->getMessage());
-            if ($e instanceof QueryException) {
-                $messageError .= ' (DB)';
-            }
-            throw new GeoException($messageError);
-        }
+        return response()->json([
+            $this->service->destroy($id, $request->archive === 'true')
+        ]);
     }
 }
