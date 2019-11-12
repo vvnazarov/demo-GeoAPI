@@ -3,134 +3,78 @@
 namespace App\Http\Controllers;
 
 use App\Geo;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use App\Services\GeoService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Database\QueryException;
+use Illuminate\Http\JsonResponse;
 use App\Exceptions\GeoException;
-use Log;
 
 class GeoController extends Controller
 {
+    /** @var GeoService */
+    protected $service;
+
     /**
-     * @return Geo[]
+     * GeoController constructor.
+     * @param GeoService $service
+     */
+    public function __construct(GeoService $service)
+    {
+        $this->service = $service;
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection
      */
     public function index()
     {
-        return Geo::all('id', 'name', 'description', 'type', 'area');
+        return $this->service->all();
     }
 
     /**
-     * @param Request $request
      * @param int $id
-     * @return mixed
+     * @return Geo
+     * @throws \Exception
      */
-    public function show(Request $request, int $id)
+    public function show(int $id)
     {
-        return Geo::findOrFail($id);
+        return $this->service->find($id);
     }
 
     /**
      * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      * @throws \Exception
      */
     public function store(Request $request)
     {
-        $data = $request->validate(Geo::getValidationRules(true));
-        $data['geometry'] = Geo::getPolygonFromWKT($request->geometry);
-
-        /** @var Geo $geo */
-        $geo = Geo::create($data);
         return response()->json([
-            'status' => env('APP_STATUS_OK_TEXT'),
-            'result' => 'created',
-            'id' => $geo->id,
+            $this->service->store($request)
         ]);
     }
 
     /**
      * @param Request $request
      * @param int $id
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      * @throws GeoException
      */
     public function update(Request $request, int $id)
     {
-        $data = $request->validate(Geo::getValidationRules());
-        if (isset($request->geometry)) {
-            $data['geometry'] = Geo::getPolygonFromWKT($request->geometry);
-        }
-
-        /** @var Geo $geo */
-        $geo = Geo::findOrFail($id);
-        $geo->fill($data);
-
-        $messageOK = 'updated';
-        $messageError = 'not ' . $messageOK;
-        try {
-            $success = DB::transaction(function () use ($geo) {
-                return $geo->save();
-            });
-        } catch (GeoException $e) {
-            throw $e;
-        } catch (\Throwable $e) {
-            Log::error($e->getMessage());
-            if ($e instanceof QueryException) {
-                $messageError .= ' (DB)';
-            }
-            throw new GeoException($messageError);
-        }
-
-        if ($success) {
-            return response()->json([
-                'status' => env('APP_STATUS_OK_TEXT'),
-                'result' => $messageOK,
-            ]);
-        } else {
-            throw new GeoException($messageError . ' (can\'t save)');
-        }
+        return response()->json([
+            $this->service->update($request, $id)
+        ]);
     }
 
     /**
      * @param Request $request
      * @param int $id
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      * @throws GeoException
      */
     public function destroy(Request $request, int $id)
     {
-        /** @var Geo $geo */
-        $geo = Geo::findOrFail($id);
-
-        if ($request->archive === 'true') {
-            $messageOK = 'archived';
-            $method = 'delete';
-            $verb = 'archive';
-        } else {
-            $messageOK = 'deleted';
-            $method = 'forceDelete';
-            $verb = 'delete';
-        }
-        $messageError = 'not ' . $messageOK;
-
-        try {
-            if ($geo->$method()) {
-                return response()->json([
-                    'status' => env('APP_STATUS_OK_TEXT'),
-                    'result' => $messageOK,
-                ]);
-            } else {
-                throw new GeoException($messageError . ' (can\'t ' . $verb . ')');
-            }
-        } catch (GeoException $e) {
-            throw $e;
-        } catch (\Throwable $e) {
-            Log::error($e->getMessage());
-            if ($e instanceof QueryException) {
-                $messageError .= ' (DB)';
-            }
-            throw new GeoException($messageError);
-        }
+        return response()->json([
+            $this->service->destroy($id, $request->archive === 'true')
+        ]);
     }
 }

@@ -16,8 +16,20 @@ class Geo extends Model
 
     protected $guarded = [];
 
+    protected $hidden = [
+        'created_at',
+        'updated_at',
+        'deleted_at',
+    ];
+
     protected $spatialFields = [
         'geometry'
+    ];
+
+    public const VALIDATION_RULES = [
+        'name' => 'max:64',
+        'description' => 'max:256',
+        'type' => 'exists:geo_types,id',
     ];
 
     public function type()
@@ -111,7 +123,7 @@ class Geo extends Model
             );
             $this->area = $query->area;
         } catch (\Throwable $e) {
-            throw new GeoException('cam\'t calculate geo\'s area');
+            throw new GeoException('can\'t calculate geo\'s area');
         }
     }
 
@@ -128,28 +140,7 @@ class Geo extends Model
             ]);
         } catch (\Throwable $e) {
             Log::error($e);
-            throw new GeoException('cam\'t save geo\'s history');
+            throw new GeoException('can\'t save geo\'s history');
         }
-    }
-
-    /**
-     * @param bool $creation
-     * @return array
-     */
-    public static function getValidationRules(bool $creation = false): array
-    {
-        $validationRules = [
-            'name' => 'max:64',
-            'description' => 'max:256',
-            'type' => 'exists:geo_types,id',
-        ];
-
-        if ($creation) {
-            $validationRules = array_map(function ($value) {
-                return 'required|' . $value;
-            }, $validationRules);
-
-        }
-        return $validationRules;
     }
 }
