@@ -20,6 +20,12 @@ class Geo extends Model
         'geometry'
     ];
 
+    public const VALIDATION_RULES = [
+        'name' => 'max:64',
+        'description' => 'max:256',
+        'type' => 'exists:geo_types,id',
+    ];
+
     public function type()
     {
         return $this->belongsTo(GeoType::class);
@@ -130,26 +136,5 @@ class Geo extends Model
             Log::error($e);
             throw new GeoException('cam\'t save geo\'s history');
         }
-    }
-
-    /**
-     * @param bool $creation
-     * @return array
-     */
-    public static function getValidationRules(bool $creation = false): array
-    {
-        $validationRules = [
-            'name' => 'max:64',
-            'description' => 'max:256',
-            'type' => 'exists:geo_types,id',
-        ];
-
-        if ($creation) {
-            $validationRules = array_map(function ($value) {
-                return 'required|' . $value;
-            }, $validationRules);
-
-        }
-        return $validationRules;
     }
 }

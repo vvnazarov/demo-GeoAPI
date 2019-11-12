@@ -49,9 +49,7 @@ class GeoController extends Controller
      */
     public function store(Request $request)
     {
-        $data = $request->validate(Geo::getValidationRules(true));
-        $data['geometry'] = Geo::getPolygonFromWKT($request->geometry);
-
+        $data = $this->service->validate($request, true);
         /** @var Geo $geo */
         $geo = Geo::create($data);
         return response()->json([
@@ -69,11 +67,7 @@ class GeoController extends Controller
      */
     public function update(Request $request, int $id)
     {
-        $data = $request->validate(Geo::getValidationRules());
-        if (isset($request->geometry)) {
-            $data['geometry'] = Geo::getPolygonFromWKT($request->geometry);
-        }
-
+        $data = $this->service->validate($request, true);
         /** @var Geo $geo */
         $geo = Geo::findOrFail($id);
         $geo->fill($data);
