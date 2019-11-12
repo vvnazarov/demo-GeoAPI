@@ -45,9 +45,38 @@ class GeoService
     }
 
     /**
+     * @param int $id
+     * @return Geo
+     * @throws \Exception
+     */
+    public function find(int $id): Geo
+    {
+        return Geo::findOrFail($id);
+    }
+
+    /**
+     * @param Request $request
+     * @return array
+     * @throws \Exception
+     * @throws GeoException
+     */
+    public function store(Request $request)
+    {
+        $data = $this->validate($request, true);
+        /** @var Geo $geo */
+        $geo = Geo::create($data);
+        return [
+            'status' => env('APP_STATUS_OK_TEXT'),
+            'result' => 'created',
+            'id' => $geo->id,
+        ];
+    }
+
+    /**
      * @param Request $request
      * @param int $id
      * @return array
+     * @throws \Exception
      * @throws GeoException
      */
     public function update(Request $request, int $id)
@@ -90,7 +119,8 @@ class GeoService
      * @return array
      * @throws GeoException
      */
-    public function destroy(int $id, bool $archive) {
+    public function destroy(int $id, bool $archive)
+    {
         /** @var Geo $geo */
         $geo = Geo::findOrFail($id);
 

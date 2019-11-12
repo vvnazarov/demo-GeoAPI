@@ -16,6 +16,12 @@ class Geo extends Model
 
     protected $guarded = [];
 
+    protected $hidden = [
+        'created_at',
+        'updated_at',
+        'deleted_at',
+    ];
+
     protected $spatialFields = [
         'geometry'
     ];
@@ -117,7 +123,7 @@ class Geo extends Model
             );
             $this->area = $query->area;
         } catch (\Throwable $e) {
-            throw new GeoException('cam\'t calculate geo\'s area');
+            throw new GeoException('can\'t calculate geo\'s area');
         }
     }
 
@@ -134,7 +140,7 @@ class Geo extends Model
             ]);
         } catch (\Throwable $e) {
             Log::error($e);
-            throw new GeoException('cam\'t save geo\'s history');
+            throw new GeoException('can\'t save geo\'s history');
         }
     }
 }

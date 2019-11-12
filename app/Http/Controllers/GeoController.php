@@ -5,11 +5,8 @@ namespace App\Http\Controllers;
 use App\Geo;
 use App\Services\GeoService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use App\Exceptions\GeoException;
-use Log;
 
 class GeoController extends Controller
 {
@@ -34,29 +31,24 @@ class GeoController extends Controller
     }
 
     /**
-     * @param Request $request
      * @param int $id
-     * @return mixed
+     * @return Geo
+     * @throws \Exception
      */
     public function show(int $id)
     {
-        return Geo::findOrFail($id);
+        return $this->service->find($id);
     }
 
     /**
      * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      * @throws \Exception
      */
     public function store(Request $request)
     {
-        $data = $this->service->validate($request, true);
-        /** @var Geo $geo */
-        $geo = Geo::create($data);
         return response()->json([
-            'status' => env('APP_STATUS_OK_TEXT'),
-            'result' => 'created',
-            'id' => $geo->id,
+            $this->service->store($request)
         ]);
     }
 
