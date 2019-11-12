@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Geo;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use App\Services\GeoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\QueryException;
@@ -12,12 +12,24 @@ use Log;
 
 class GeoController extends Controller
 {
+    /** @var GeoService */
+    protected $service;
+
     /**
-     * @return Geo[]
+     * GeoController constructor.
+     * @param GeoService $service
+     */
+    public function __construct(GeoService $service)
+    {
+        $this->service = $service;
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection
      */
     public function index()
     {
-        return Geo::all('id', 'name', 'description', 'type', 'area');
+        return $this->service->all();
     }
 
     /**
