@@ -3,8 +3,12 @@
 namespace App\Services;
 
 use App\Geo;
+use Illuminate\Database\QueryException;
+use App\Exceptions\GeoException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Log;
 
 class GeoService
 {
@@ -17,6 +21,45 @@ class GeoService
         return Geo::all('id', 'name', 'description', 'type', 'area');
     }
 
+    /**
+     * @param Request $request
+     * @param int $id
+     * @return array
+     * @throws GeoException
+     */
+    public function update(Request $request, int $id)
+    {
+        $data = $this->validate($request, false);
+
+        /** @var Geo $geo */
+        $geo = Geo::findOrFail($id);
+        $geo->fill($data);
+
+        $messageOK = 'updated';
+        $messageError = 'not ' . $messageOK;
+        try {
+            $success = DB::transaction(function () use ($geo) {
+                return $geo->save();
+            });
+        } catch (GeoException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            Log::error($e->getMessage());
+            if ($e instanceof QueryException) {
+                $messageError .= ' (DB)';
+            }
+            throw new GeoException($messageError);
+        }
+
+        if ($success) {
+            return [
+                'status' => env('APP_STATUS_OK_TEXT'),
+                'result' => $messageOK,
+            ];
+        } else {
+            throw new GeoException($messageError . ' (can\'t save)');
+        }
+    }
 
     /**
      * @param Request $request

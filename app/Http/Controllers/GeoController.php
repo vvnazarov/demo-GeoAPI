@@ -37,7 +37,7 @@ class GeoController extends Controller
      * @param int $id
      * @return mixed
      */
-    public function show(Request $request, int $id)
+    public function show(int $id)
     {
         return Geo::findOrFail($id);
     }
@@ -63,39 +63,13 @@ class GeoController extends Controller
      * @param Request $request
      * @param int $id
      * @return \Illuminate\Http\JsonResponse
-     * @throws GeoException
+     * @throws \Exception
      */
     public function update(Request $request, int $id)
     {
-        $data = $this->service->validate($request, true);
-        /** @var Geo $geo */
-        $geo = Geo::findOrFail($id);
-        $geo->fill($data);
-
-        $messageOK = 'updated';
-        $messageError = 'not ' . $messageOK;
-        try {
-            $success = DB::transaction(function () use ($geo) {
-                return $geo->save();
-            });
-        } catch (GeoException $e) {
-            throw $e;
-        } catch (\Throwable $e) {
-            Log::error($e->getMessage());
-            if ($e instanceof QueryException) {
-                $messageError .= ' (DB)';
-            }
-            throw new GeoException($messageError);
-        }
-
-        if ($success) {
-            return response()->json([
-                'status' => env('APP_STATUS_OK_TEXT'),
-                'result' => $messageOK,
-            ]);
-        } else {
-            throw new GeoException($messageError . ' (can\'t save)');
-        }
+        return response()->json([
+            $this->service->update($request, $id)
+        ]);
     }
 
     /**
